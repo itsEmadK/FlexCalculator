@@ -21,7 +21,7 @@ export default function Button({
   const variantStyles = {
     'digit': "bg-gray-100 text-gray-900 hover:bg-gray-200",
     'operator': active 
-      ? "bg-primary-600 text-white" 
+      ? "bg-blue-700 text-white" 
       : "bg-primary text-white hover:bg-primary-600",
     'function': "bg-secondary-100 text-primary hover:bg-secondary-200",
     'equals': "bg-secondary text-white hover:bg-secondary/90"
