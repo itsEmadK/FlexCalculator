@@ -24,7 +24,7 @@ export default function Button({
       ? "bg-blue-700 text-white" 
       : "bg-primary text-white hover:bg-primary-600",
     'function': "bg-secondary-100 text-primary hover:bg-secondary-200",
-    'equals': "bg-secondary text-white hover:bg-secondary/90"
+    'equals': "bg-blue-700 text-white hover:bg-blue-800"
   };
   
   const spanStyles = {

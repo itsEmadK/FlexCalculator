@@ -1,3 +1,5 @@
+export type CalculatorMode = 'simple' | 'scientific';
+
 export interface CalculatorState {
   firstOperand: number | null;
   secondOperand: number | null;
@@ -5,6 +7,12 @@ export interface CalculatorState {
   displayValue: string;
   waitingForSecondOperand: boolean;
   expressionString: string;
+  mode: CalculatorMode;
+  history: Array<{
+    expression: string;
+    result: string;
+  }>;
+  memory: number;
 }
 
 // Helper function to perform the calculation based on operator
@@ -21,8 +29,116 @@ export function calculate(firstOperand: number, secondOperand: number, operator:
         throw new Error("Cannot divide by zero");
       }
       return firstOperand / secondOperand;
+    case '^':
+      return Math.pow(firstOperand, secondOperand);
+    case 'mod':
+      return firstOperand % secondOperand;
     default:
       return secondOperand;
+  }
+}
+
+// Scientific functions
+export function handleScientific(state: CalculatorState, operation: string): CalculatorState {
+  if (state.displayValue === 'Cannot divide by zero' || state.displayValue === 'Invalid input') {
+    return handleClear(state);
+  }
+  
+  const currentValue = parseFloat(state.displayValue);
+  let result: number;
+  let expressionStr = '';
+  
+  try {
+    switch (operation) {
+      case 'sin':
+        result = Math.sin(currentValue);
+        expressionStr = `sin(${currentValue})`;
+        break;
+      case 'cos':
+        result = Math.cos(currentValue);
+        expressionStr = `cos(${currentValue})`;
+        break;
+      case 'tan':
+        result = Math.tan(currentValue);
+        expressionStr = `tan(${currentValue})`;
+        break;
+      case 'sqrt':
+        if (currentValue < 0) throw new Error('Invalid input');
+        result = Math.sqrt(currentValue);
+        expressionStr = `√(${currentValue})`;
+        break;
+      case 'log':
+        if (currentValue <= 0) throw new Error('Invalid input');
+        result = Math.log10(currentValue);
+        expressionStr = `log(${currentValue})`;
+        break;
+      case 'ln':
+        if (currentValue <= 0) throw new Error('Invalid input');
+        result = Math.log(currentValue);
+        expressionStr = `ln(${currentValue})`;
+        break;
+      case 'square':
+        result = currentValue * currentValue;
+        expressionStr = `(${currentValue})²`;
+        break;
+      case 'cube':
+        result = currentValue * currentValue * currentValue;
+        expressionStr = `(${currentValue})³`;
+        break;
+      case '1/x':
+        if (currentValue === 0) throw new Error('Cannot divide by zero');
+        result = 1 / currentValue;
+        expressionStr = `1/(${currentValue})`;
+        break;
+      case '+/-':
+        result = -currentValue;
+        expressionStr = `-(${currentValue})`;
+        break;
+      case 'exp':
+        result = Math.exp(currentValue);
+        expressionStr = `e^(${currentValue})`;
+        break;
+      case 'pi':
+        result = Math.PI;
+        expressionStr = 'π';
+        break;
+      case 'e':
+        result = Math.E;
+        expressionStr = 'e';
+        break;
+      default:
+        return state;
+    }
+    
+    // Add to history
+    const newHistory = [...state.history];
+    if (operation !== 'pi' && operation !== 'e') {
+      newHistory.push({
+        expression: expressionStr,
+        result: result.toString()
+      });
+    }
+    
+    return {
+      ...state,
+      displayValue: result.toString(),
+      expressionString: expressionStr,
+      firstOperand: result,
+      waitingForSecondOperand: true,
+      history: newHistory
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        ...state,
+        displayValue: error.message,
+        expressionString: error.message,
+        firstOperand: null,
+        currentOperator: null,
+        waitingForSecondOperand: true
+      };
+    }
+    return state;
   }
 }
 
@@ -95,13 +211,23 @@ export function handleEquals(state: CalculatorState): CalculatorState {
   if (currentOperator) {
     try {
       const result = calculate(firstOperand!, inputValue, currentOperator);
+      
+      // Add to history
+      const newHistory = [...state.history];
+      const expressionStr = `${firstOperand} ${currentOperator} ${inputValue} =`;
+      newHistory.push({
+        expression: expressionStr,
+        result: result.toString()
+      });
+      
       return {
         ...state,
         displayValue: String(result),
         firstOperand: result,
         currentOperator: null,
         waitingForSecondOperand: true,
-        expressionString: `${firstOperand} ${currentOperator} ${inputValue} =`
+        expressionString: expressionStr,
+        history: newHistory
       };
     } catch (error) {
       if (error instanceof Error) {
@@ -132,6 +258,39 @@ export function handleClear(state: CalculatorState): CalculatorState {
     waitingForSecondOperand: false,
     expressionString: ''
   };
+}
+
+// Memory functions
+export function handleMemory(state: CalculatorState, operation: 'M+' | 'M-' | 'MR' | 'MC'): CalculatorState {
+  const currentValue = parseFloat(state.displayValue);
+  
+  switch (operation) {
+    case 'M+':
+      return {
+        ...state,
+        memory: state.memory + currentValue,
+        waitingForSecondOperand: true
+      };
+    case 'M-':
+      return {
+        ...state,
+        memory: state.memory - currentValue,
+        waitingForSecondOperand: true
+      };
+    case 'MR':
+      return {
+        ...state,
+        displayValue: state.memory.toString(),
+        waitingForSecondOperand: true
+      };
+    case 'MC':
+      return {
+        ...state,
+        memory: 0
+      };
+    default:
+      return state;
+  }
 }
 
 // Handle decimal point
